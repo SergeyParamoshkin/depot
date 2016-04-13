@@ -1,0 +1,64 @@
+property \
+     no-quorum-policy="ignore" \
+     stonith-enabled="false" \
+     crmd-transition-delay="0s"
+ 
+ rsc_defaults \
+     resource-stickiness="INFINITY" \
+     migration-threshold="1"
+ 
+ ms msPostgresql postgresql \
+     meta \
+         master-max="1" \
+         master-node-max="1" \
+         clone-max="2" \
+         clone-node-max="1" \
+         notify="true"
+ 
+ clone clnPingCheck pingCheck
+ group master-group \
+       pgvip
+ 
+ primitive pgvip ocf:heartbeat:IPaddr2 \
+     params \
+         ip="vip" \
+         iflabel="pgvip" \
+     op start   timeout="60s" interval="0s"  on-fail="stop" \
+     op monitor timeout="60s" interval="1s" on-fail="restart" \
+     op stop    timeout="60s" interval="0s"  on-fail="block" 
+ primitive postgresql ocf:heartbeat:pgsql \
+     params \
+        pgctl="/usr/pgsql-9.3/bin/pg_ctl" \
+        pgdata="/var/lib/pgsql/9.3/data" \
+        psql="/usr/pgsql-9.3/bin/psql" \
+        rep_mode="async" \
+        node_list="node1 node2" \
+        restore_command="echo 1 > /dev/null" \
+        primary_conninfo_opt="keepalives_idle=60 keepalives_interval=5 keepalives_count=5" \
+        master_ip="vip" \
+        stop_escalate="0" \
+        restart_on_promote="false" \
+        tmpdir="/var/lib/pgsql/9.3/tmpdir" \
+        op start   timeout="60s" interval="0s"  on-fail="restart" \
+        op monitor timeout="60s" interval="2s" on-fail="restart" \
+        op monitor timeout="60s" interval="3s"  on-fail="restart" role="Master" \
+        op promote timeout="60s" interval="0s"  on-fail="restart" \
+        op demote  timeout="60s" interval="0s"  on-fail="stop" \
+        op stop    timeout="60s" interval="0s"  on-fail="block" \
+        op notify  timeout="60s" interval="0s"
+ 
+ primitive pingCheck ocf:pacemaker:ping \
+    params \
+        name="default_ping_set" \
+        host_list="default_gw" \
+        multiplier="100" \
+        op start   timeout="60s" interval="0s"  on-fail="restart" \
+        op monitor timeout="60s" interval="10s" on-fail="restart" \
+        op stop    timeout="60s" interval="0s"  on-fail="ignore"
+
+ colocation rsc_colocation-1 inf: msPostgresql        clnPingCheck
+ colocation rsc_colocation-2 inf: master-group        msPostgresql:Master
+ 
+ order rsc_order-1 0: clnPingCheck          msPostgresql
+ order rsc_order-2 0: msPostgresql:promote  master-group:start  symmetrical=false
+ order rsc_order-3 0: msPostgresql:demote   master-group:stop   symmetrical=false 

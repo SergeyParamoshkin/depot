@@ -1,3 +1,6 @@
+
+[Sources from](https://vbponomarev.wordpress.com/2015/05/13/%D0%B2%D1%8B%D1%81%D0%BE%D0%BA%D0%BE%D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%BD%D1%8B%D0%B9-postgres-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80-activestandby-%D1%81%D0%BE-stream-%D1%80%D0%B5%D0%BF/)
+
 Операции 1 - 4 выполняются на основном и на резервном серверах.
 
 1. Установить CentOS 6.6
